@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌉 California Road Trip Planner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+/* ── RESET ── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+     display:flex;background:#0d1117;color:#e6edf3}
+
+/* ── LAYOUT ── */
+#map{flex:1;z-index:1}
+#sidebar{
+  width:400px;flex-shrink:0;
+  display:flex;flex-direction:column;
+  background:#161b22;border-left:1px solid #30363d;
+  z-index:2;overflow:hidden;
+}
+
+/* ── HEADER ── */
+#sidebar-header{
+  padding:13px 16px 9px;background:#0d1117;
+  border-bottom:1px solid #30363d;flex-shrink:0;
+}
+.trip-title{font-size:18px;font-weight:700;color:#f0f6fc}
+.trip-sub{font-size:11px;color:#8b949e;margin-top:1px}
+
+/* ── CONTROLS ── */
+#sidebar-controls{
+  padding:9px 14px;background:#0d1117;
+  border-bottom:1px solid #30363d;flex-shrink:0;
+}
+.ctrl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-label{font-size:11px;color:#8b949e;white-space:nowrap}
+.ctrl-input{
+  background:#161b22;border:1px solid #30363d;color:#f0f6fc;
+  padding:5px 9px;border-radius:6px;font-size:12px;flex:1;outline:none;
+}
+.ctrl-input:focus{border-color:#58a6ff}
+.ctrl-input:disabled{color:#8b949e}
+.stats-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.sc{
+  background:#21262d;border:1px solid #30363d;border-radius:14px;
+  padding:3px 9px;font-size:11px;color:#c9d1d9;
+  display:inline-flex;align-items:center;gap:3px;
+}
+.sc.hl{background:#1f3a5f;border-color:#58a6ff;color:#79c0ff}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap}
+.tbtn{
+  padding:5px 10px;border-radius:6px;border:1px solid #30363d;
+  font-size:11px;font-weight:600;cursor:pointer;
+  background:#21262d;color:#c9d1d9;white-space:nowrap;
+  transition:all .15s;
+}
+.tbtn:hover,.tbtn.on{background:#1f3a5f;border-color:#58a6ff;color:#58a6ff}
+.tbtn.danger:hover{background:#3d1f1f;border-color:#f85149;color:#f85149}
+
+/* ── SCROLL LIST ── */
+#sidebar-list{
+  flex:1;min-height:0;
+  overflow-y:auto;overflow-x:hidden;
+  padding:10px 12px 24px;
+  display:flex;flex-direction:column;gap:0;
+  scrollbar-width:thin;scrollbar-color:#30363d transparent;
+}
+#sidebar-list::-webkit-scrollbar{width:4px}
+#sidebar-list::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
+
+/* ── PRICE PANEL ── */
+.price-panel{
+  background:#161b22;border:1px solid #30363d;border-radius:10px;
+  overflow:hidden;margin-bottom:8px;flex-shrink:0;
+}
+.price-panel-hdr{
+  padding:9px 12px;display:flex;justify-content:space-between;
+  align-items:center;cursor:pointer;user-select:none;background:#1c2128;
+}
+.price-panel-hdr:hover{background:#21262d}
+.pp-title{font-size:12px;font-weight:700;color:#f0f6fc}
+.pp-arrow{font-size:11px;color:#8b949e;transition:transform .2s}
+.pp-arrow.open{transform:rotate(180deg)}
+.price-panel-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.price-panel-body.open{max-height:700px}
+.pp-inner{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.ps{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.pr{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #21262d}
+.pr:last-child{border-bottom:none}
+.pr-name{font-size:11px;color:#c9d1d9}
+.pr-note{font-size:10px;color:#8b949e}
+.pr-val{font-size:11px;font-weight:600;color:#3fb950}
+.p-total{background:#1f3a5f;border-radius:6px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;margin-top:3px}
+.p-total .pl{font-size:11px;color:#79c0ff;font-weight:600}
+.p-total .pv{font-size:13px;color:#58a6ff;font-weight:700}
+.pass-tip{background:#1a3a1a;border:1px solid #3fb95044;border-radius:6px;padding:6px 9px;font-size:11px;color:#7ee787;line-height:1.5}
+.pass-tip a{color:#3fb950}
+
+/* ── CONNECTOR ── */
+.connector{
+  display:flex;align-items:center;gap:7px;
+  padding:2px 0 2px 15px;min-height:28px;
+}
+.conn-line{width:2px;background:#2d333b;align-self:stretch;flex-shrink:0}
+.conn-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.time-badge{background:#1f3a5f;color:#79c0ff;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600}
+.dist-badge{background:#21262d;color:#8b949e;padding:1px 7px;border-radius:8px;font-size:10px}
+
+/* ── STOP CARD (collapsed) ── */
+.stop-card{
+  background:#21262d;border:1px solid #30363d;border-radius:10px;
+  overflow:hidden;cursor:pointer;
+  transition:border-color .15s, box-shadow .12s;
+  flex-shrink:0;
+}
+.stop-card:hover{border-color:#58a6ff}
+.stop-card.expanded{border-color:#58a6ff;box-shadow:0 0 0 1px #58a6ff33}
+
+/* left accent by type */
+.stop-card.overnight-card {border-left:3px solid #f85149}
+.stop-card.city-card      {border-left:3px solid #8957e5}
+.stop-card.park-card      {border-left:3px solid #3fb950}
+.stop-card.attraction-card{border-left:3px solid #58a6ff}
+
+/* ── MINI STRIP ── */
+.card-mini{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 11px 9px 12px;
+}
+.mini-num{
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:#0d1117;flex-shrink:0;
+}
+.mini-body{flex:1;min-width:0}
+.mini-name{
+  font-size:13px;font-weight:700;color:#f0f6fc;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mini-meta{display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap}
+.mini-day{font-size:10px;color:#8b949e}
+.fee-chip{background:#2d2a1f;border:1px solid #e3b34144;color:#e3b341;padding:1px 6px;border-radius:7px;font-size:9px;font-weight:700}
+.price-chip{background:#1a3a1a;border:1px solid #3fb95044;color:#7ee787;padding:1px 6px;border-radius:7px;font-size:9px;font-weight:700}
+.badge{padding:1px 5px;border-radius:7px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.badge-overnight{background:#3d1f1f;color:#f85149;border:1px solid #f8514944}
+.badge-park     {background:#1a3a1a;color:#3fb950;border:1px solid #3fb95044}
+.badge-attraction{background:#1f3a5f;color:#58a6ff;border:1px solid #58a6ff44}
+.badge-city     {background:#2a1f4a;color:#8957e5;border:1px solid #8957e544}
+.mini-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.expand-icon{font-size:11px;color:#8b949e;transition:transform .2s;line-height:1}
+.stop-card.expanded .expand-icon{transform:rotate(180deg)}
+
+/* ── FULL CONTENT ──
+   Expands on CSS :hover (browser-native, no JS needed)
+   OR when .expanded is set by a click/pin.                */
+.card-full{
+  max-height:0;overflow:hidden;
+  transition:max-height .28s cubic-bezier(.4,0,.2,1);
+  border-top:0 solid transparent;
+}
+.stop-card:hover .card-full,
+.stop-card.expanded .card-full{
+  max-height:900px;
+  border-top:1px solid #30363d;
+}
+/* Rotate chevron on hover or when pinned open */
+.stop-card:hover .expand-icon,
+.stop-card.expanded .expand-icon{
+  transform:rotate(180deg);
+}
+
+/* ── TABS ── */
+.card-tabs{display:flex;background:#1c2128}
+.card-tab{
+  flex:1;padding:6px 4px;text-align:center;font-size:10px;font-weight:600;
+  color:#8b949e;cursor:pointer;border-right:1px solid #30363d;
+  transition:all .15s;user-select:none;
+}
+.card-tab:last-child{border-right:none}
+.card-tab:hover,.card-tab.active{background:#21262d;color:#58a6ff}
+.card-tab-pane{display:none;padding:10px 12px}
+.card-tab-pane.active{display:block}
+
+/* ── PARK INFO ── */
+.info-desc{font-size:11px;color:#8b949e;line-height:1.55;margin-bottom:8px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.info-item{background:#161b22;border-radius:6px;padding:5px 8px}
+.info-lbl{font-size:9px;color:#8b949e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.info-val{font-size:11px;color:#c9d1d9;font-weight:600}
+.hl-list{list-style:none;display:flex;flex-direction:column;gap:3px}
+.hl-list li{font-size:11px;color:#c9d1d9;padding:3px 7px;background:#161b22;border-radius:4px}
+
+/* ── HIKE CARDS ── */
+.hike-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.hike-card:last-child{margin-bottom:0}
+.hike-name{font-size:11px;font-weight:700;color:#f0f6fc;margin-bottom:4px}
+.hike-stats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
+.hs{font-size:10px;color:#8b949e;background:#21262d;padding:2px 6px;border-radius:5px}
+.hs span{color:#c9d1d9;font-weight:600}
+.diff-easy{color:#3fb950}.diff-mod{color:#e3b341}.diff-hard{color:#f85149}
+.hike-desc{font-size:11px;color:#8b949e;line-height:1.45;margin-bottom:4px}
+.hike-gear{font-size:10px;color:#6d8a9c;font-style:italic}
+
+/* ── HOTEL TAB ── */
+.hotel-dates{font-size:11px;color:#8b949e;margin-bottom:7px;padding:5px 8px;background:#161b22;border-radius:6px;border-left:2px solid #f85149;line-height:1.5}
+.hotel-suggest{font-size:11px;color:#c9d1d9;margin-bottom:7px}
+.hotel-suggest strong{color:#8b949e;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+.hotel-suggest.daynote{border-left:2px solid #3fb950;padding-left:8px;margin-left:-8px}
+.search-btns{display:flex;gap:5px;flex-wrap:wrap}
+.sbtn{padding:4px 10px;border-radius:5px;border:none;font-size:10px;font-weight:700;cursor:pointer;transition:opacity .15s;text-decoration:none;display:inline-flex;align-items:center;gap:3px}
+.sbtn:hover{opacity:.8}
+.btn-booking{background:#003580;color:#fff}
+.btn-airbnb{background:#ff5a5f;color:#fff}
+.btn-vrbo{background:#1b6bc0;color:#fff}
+.btn-maps{background:#1a73e8;color:#fff}
+
+/* ── REMOVE BTN ── */
+.rm-btn{
+  width:18px;height:18px;border-radius:4px;
+  background:#3d1f1f;border:1px solid #f85149;color:#f85149;
+  font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .15s;flex-shrink:0;
+}
+.stop-card:hover .rm-btn{opacity:1}
+
+/* ── NIGHTS ADJUSTER ── */
+.nights-ctrl{display:flex;align-items:center;gap:0;background:#161b22;border:1px solid #30363d;border-radius:6px;overflow:hidden;margin-left:4px}
+.nc-btn{background:none;border:none;color:#79c0ff;font-size:14px;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0;line-height:1}
+.nc-btn:hover{background:#1f3a5f}
+.nc-val{font-size:11px;font-weight:700;color:#f0f6fc;min-width:18px;text-align:center}
+.nc-label{font-size:10px;color:#8b949e;padding-right:2px;white-space:nowrap}
+
+/* ── MAP HINT ── */
+#map-hint{
+  position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
+  background:rgba(13,17,23,.92);border:1px solid #58a6ff;color:#79c0ff;
+  padding:7px 16px;border-radius:18px;font-size:12px;
+  z-index:1000;pointer-events:none;display:none;backdrop-filter:blur(8px);
+}
+#map-hint.show{display:block}
+
+/* ── CLIMATE LEGEND ── */
+#climate-legend{
+  position:absolute;bottom:40px;right:10px;
+  background:rgba(13,17,23,.88);border:1px solid #30363d;border-radius:8px;
+  padding:8px 12px;z-index:1000;backdrop-filter:blur(6px);display:none;
+}
+#climate-legend.show{display:block}
+.cl-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.cl-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;color:#c9d1d9;font-size:11px}
+.cl-sw{width:12px;height:12px;border-radius:2px;flex-shrink:0;opacity:.75}
+
+/* ── SPINNER ── */
+.spin{display:inline-block;width:10px;height:10px;border:2px solid #30363d;border-top:2px solid #58a6ff;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── LEAFLET POPUPS ── */
+.leaflet-popup-content-wrapper{background:#21262d;border:1px solid #30363d;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.leaflet-popup-content{color:#e6edf3;margin:10px 14px;min-width:150px}
+.leaflet-popup-tip{background:#21262d}
+.pu-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.pu-day{font-size:11px;color:#8b949e;margin-bottom:4px}
+.pu-extra{font-size:11px;color:#e3b341;margin-bottom:2px}
+.pu-action{font-size:10px;color:#58a6ff;margin-top:5px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="map-hint">📍 Click anywhere on the map to place your new stop</div>
+<div id="climate-legend">
+  <div class="cl-title">Climate Zones</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#2d6a4f"></div>North Coast Rainforest</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#52b788"></div>Mediterranean Coast</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#e9c46a"></div>Central Valley</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#6d597a"></div>Sierra Nevada Alpine</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#f4a261"></div>Great Basin / High Desert</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#e76f51"></div>Mojave Desert</div>
+  <div class="cl-row"><div class="cl-sw" style="background:#a7c957"></div>Southern Chaparral</div>
+</div>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div class="trip-title">🌉 California Road Trip</div>
+    <div class="trip-sub"><span id="stat-days">9</span> Days · National Parks &amp; Coast · 3 People</div>
+  </div>
+  <div id="sidebar-controls">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Departure</span>
+      <input type="date" class="ctrl-input" id="start-date" value="2026-08-16">
+      <span class="ctrl-label">Return</span>
+      <input type="date" class="ctrl-input" id="end-date" disabled>
+    </div>
+    <div class="stats-row">
+      <span class="sc hl">🚗 <span id="stat-drive">Routing…</span></span>
+      <span class="sc">📏 <span id="stat-dist">—</span></span>
+      <span class="sc">🏕 <span id="stat-nights">8 nights</span></span>
+      <span class="sc">💰 <span id="stat-cost">~$2.1k–4.2k</span></span>
+    </div>
+    <div class="btn-row">
+      <button class="tbtn" id="btn-add"     onclick="toggleAddMode()">＋ Add Stop</button>
+      <button class="tbtn" id="btn-recalc"  onclick="fetchRoute()">↻ Route</button>
+      <button class="tbtn" onclick="fitMap()">⊡ Fit</button>
+      <button class="tbtn" id="btn-topo"    onclick="toggleTopo()">🗻 Topo</button>
+      <button class="tbtn" id="btn-climate" onclick="toggleClimate()">🌡 Climate</button>
+      <button class="tbtn danger" onclick="if(confirm('Reset?'))location.reload()">↺</button>
+    </div>
+  </div>
+  <div id="sidebar-list"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+let stops = [
+  { id:0,  name:"San Francisco", lat:37.7749, lng:-122.4194,
+    day:"Start — Day 1 morning", overnight:false, type:"city", dayNum:0,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:1,  name:"Point Reyes National Seashore", lat:38.0434, lng:-122.8002,
+    day:"Day 1 — morning stop", overnight:false, type:"park", dayNum:1,
+    entryFee:"Free", ppn:null, nights:null,
+    parkInfo:{ rating:"★★★★☆", best:"Mar–Nov", crowds:"Moderate",
+      desc:"Dramatic headlands jutting into the Pacific with a historic lighthouse, vast beaches, and one of the largest tule elk herds in California.",
+      hl:["🦌 Tule Elk Reserve","🏔 Point Reyes Lighthouse","🌊 Drakes Beach","🚣 Tomales Bay kayaking"] },
+    hikes:[
+      { name:"Chimney Rock Trail", dist:"1.8 mi RT", gain:"Minimal", time:"1h", diff:"easy",
+        desc:"Easy walk to headlands with ocean and lighthouse views. Excellent whale watching in spring." },
+      { name:"Tomales Point Trail", dist:"9 mi RT", gain:"400 ft", time:"4–5h", diff:"mod",
+        desc:"Runs through Tule Elk Reserve on an exposed ridge with panoramic bay and Pacific views.",
+        gear:"Water (no sources), sun protection, layers for coastal wind" }
+    ], hotelTip:null, dayTrips:null },
+  { id:2, name:"Bodega Bay", lat:38.3327, lng:-123.0522,
+    day:"Day 1 — lunch stop", overnight:false, type:"attraction", dayNum:1,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:3, name:"Jenner", lat:38.4521, lng:-123.1158,
+    day:"Day 1 — coastal drive stop", overnight:false, type:"attraction", dayNum:1,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:4, name:"Mendocino", lat:39.3054, lng:-123.7997,
+    day:"Day 1 — 1 night", overnight:true, type:"overnight", dayNum:1,
+    entryFee:null, ppn:"$180–$380", nights:1, parkInfo:null, hikes:[],
+    hotelTip:"Brewery Gulch Inn · Stanford Inn by the Sea",
+    dayTrips:"Rugged cliffs · Pacific bluffs trails · Mendocino Headlands · Top-tier restaurants" },
+  { id:5, name:"Avenue of the Giants", lat:40.3459, lng:-124.0516,
+    day:"Day 2 — morning drive", overnight:false, type:"park", dayNum:2,
+    entryFee:"Free", ppn:null, nights:null,
+    parkInfo:{ rating:"★★★★★", best:"Apr–Oct", crowds:"Low–Moderate",
+      desc:"A 31-mile scenic road through Humboldt Redwoods SP passing the world's largest remaining old-growth redwood forest. Cathedral-like majesty.",
+      hl:["🌲 Founder's Grove","🌲 Rockefeller Forest","🏞 Bull Creek Flats","🌊 Eel River beaches"] },
+    hikes:[
+      { name:"Founders Grove Nature Loop", dist:"0.7 mi", gain:"Minimal", time:"30 min", diff:"easy",
+        desc:"Flat loop past magnificent old-growth redwoods including the fallen 362-ft Dyerville Giant." }
+    ], hotelTip:null, dayTrips:null },
+  { id:6, name:"Prairie Creek Redwoods SP", lat:41.3534, lng:-124.0264,
+    day:"Day 2 — afternoon", overnight:false, type:"park", dayNum:2,
+    entryFee:"$8/vehicle", ppn:null, nights:null,
+    parkInfo:{ rating:"★★★★★", best:"May–Oct", crowds:"Low",
+      desc:"Ancient coastal redwood groves and Fern Canyon — a magical slot canyon with fern-covered walls (Jurassic Park 2). Roosevelt elk roam freely.",
+      hl:["🌿 Fern Canyon (Jurassic Park 2)","🦌 Roosevelt Elk Prairie","🌲 Big Tree Wayside","🌊 Gold Bluffs Beach"] },
+    hikes:[
+      { name:"Fern Canyon Loop", dist:"1.5 mi loop", gain:"Minimal", time:"1h", diff:"easy",
+        desc:"Walk through a slot canyon with walls covered floor-to-ceiling in ferns. Multiple stream crossings.",
+        gear:"Waterproof shoes strongly recommended · Camera" },
+      { name:"James Irvine Trail", dist:"8.3 mi RT", gain:"600 ft", time:"4–5h", diff:"mod",
+        desc:"One of the finest redwood hikes in California. Pristine old-growth forest dropping into Fern Canyon.",
+        gear:"Water, layers, sturdy trail shoes" }
+    ], hotelTip:null, dayTrips:null },
+  { id:7, name:"Trinidad", lat:41.0596, lng:-124.1430,
+    day:"Day 2–3 — 2 nights", overnight:true, type:"overnight", dayNum:2,
+    entryFee:null, ppn:"$130–$270", nights:2, parkInfo:null, hikes:[],
+    hotelTip:"Trinidad Bay B&B · Lost Whale Inn · Turtle Rocks Oceanfront Inn",
+    dayTrips:"Day 3: Fern Canyon · James Irvine Trail · Newton B. Drury Scenic Pkwy · Trinidad Head lighthouse" },
+  { id:8, name:"Lassen Volcanic NP", lat:40.5358, lng:-121.5700,
+    day:"Day 4–5 — 2 nights", overnight:true, type:"overnight", dayNum:4,
+    entryFee:"$35/vehicle (7-day)", ppn:"$150–$240", nights:2,
+    parkInfo:{ rating:"★★★★★", best:"Jul–Sep", crowds:"Low — massively underrated!",
+      desc:"Active volcanic landscape with steaming fumaroles, boiling mud pots and crystal lakes. Far less crowded than Yosemite. Remnants of the last major US eruption (1914–17).",
+      hl:["🌋 Bumpass Hell hydrothermal area","🏔 Lassen Peak (10,457 ft)","♨️ Sulphur Works","🏔 Manzanita Lake","❄️ Snow into early July"] },
+    hikes:[
+      { name:"Bumpass Hell", dist:"3 mi RT", gain:"600 ft", time:"2–3h", diff:"mod",
+        desc:"Park's signature hike to the largest hydrothermal area. Boiling springs, mud pots, fumaroles. Stay on boardwalk.",
+        gear:"Sturdy shoes · Layers (cold at 8,200 ft) · 1.5L water · Sunscreen" },
+      { name:"Lassen Peak Trail", dist:"5 mi RT", gain:"1,957 ft", time:"4–6h", diff:"hard",
+        desc:"Summit an active volcano at 10,457 ft. Altitude makes it harder than numbers suggest. Start before 8am to beat afternoon storms.",
+        gear:"Windproof jacket · Warm layers · Trekking poles · 2L water · Start early" },
+      { name:"Manzanita Lake Loop", dist:"1.8 mi loop", gain:"Minimal", time:"45 min", diff:"easy",
+        desc:"Flat loop around Manzanita Lake with Lassen Peak reflections. Perfect for sunrise." }
+    ],
+    hotelTip:"Highlands Ranch Resort (Mineral) · Drakesbad Guest Ranch (in-park)",
+    dayTrips:"Bumpass Hell · Lassen Peak · Sulphur Works · Cold Boiling Lake" },
+  { id:9, name:"Sequoia NP / Wuksachi", lat:36.6068, lng:-118.7352,
+    day:"Day 6–7 — 2 nights", overnight:true, type:"overnight", dayNum:6,
+    entryFee:"$35/vehicle (7-day)", ppn:"$180–$350", nights:2,
+    parkInfo:{ rating:"★★★★★", best:"May–Oct", crowds:"Moderate",
+      desc:"Home to the largest trees on Earth by volume. General Sherman alone contains enough wood to build 40 five-room houses. Changes your sense of scale permanently.",
+      hl:["🌲 General Sherman Tree (world's largest)","🏔 Moro Rock granite dome","🌿 Crescent Meadow","🌲 Congress Trail big-tree loop","🐻 Black bear country"] },
+    hikes:[
+      { name:"Congress Trail Loop", dist:"2 mi loop", gain:"200 ft", time:"1.5h", diff:"easy",
+        desc:"Paved loop past General Sherman and dozens of massive named sequoias.",
+        gear:"Comfortable shoes · Water" },
+      { name:"Moro Rock", dist:"0.6 mi RT", gain:"350 ft", time:"45 min", diff:"mod",
+        desc:"Short but steep granite dome with spectacular Great Western Divide views. Stone stairs cut into rock.",
+        gear:"Good grip shoes · Layers (wind-exposed at top)" },
+      { name:"Crescent Meadow Loop", dist:"1.6 mi loop", gain:"Minimal", time:"1h", diff:"easy",
+        desc:"Muir called this the 'gem of the Sierra'. High-altitude meadow with giant sequoias. Bears common.",
+        gear:"Water · Bear awareness" },
+      { name:"Alta Peak", dist:"13 mi RT", gain:"4,000 ft", time:"7–10h", diff:"hard",
+        desc:"The big challenge of Sequoia. Panoramic Sierra Nevada views from 11,200 ft. Very early start essential.",
+        gear:"Full daypack · Poles · 3L water · High-calorie food · Layers · Map" }
+    ],
+    hotelTip:"Wuksachi Lodge (inside park) · The Gateway Restaurant & Lodge (Three Rivers)",
+    dayTrips:"General Sherman Tree · Moro Rock · Giant Forest Museum · Crescent Meadow" },
+  { id:10, name:"Big Sur", lat:36.2704, lng:-121.8081,
+    day:"Day 8 — 1 night", overnight:true, type:"overnight", dayNum:8,
+    entryFee:"$10/vehicle (state parks)", ppn:"$220–$550", nights:1,
+    parkInfo:{ rating:"★★★★★", best:"Apr–Oct (avoid June fog)", crowds:"High in summer",
+      desc:"The most dramatic coastline in the continental USA — 90 miles of rugged cliffs and redwood canyons plunging into the Pacific.",
+      hl:["🌉 Bixby Creek Bridge","💧 McWay Falls (80ft onto beach)","🏖 Pfeiffer Beach (purple sand)","🌲 Pfeiffer Big Sur State Park","🌅 Nacimiento Road sunset"] },
+    hikes:[
+      { name:"McWay Falls", dist:"0.6 mi RT", gain:"Minimal", time:"30 min", diff:"easy",
+        desc:"Short walk to the iconic 80ft waterfall crashing onto a pristine beach. Most photographed spot in Big Sur.",
+        gear:"Camera" },
+      { name:"Ewoldsen Trail", dist:"4.7 mi loop", gain:"1,550 ft", time:"3–4h", diff:"mod",
+        desc:"Best hike in Big Sur. Old-growth redwoods to a ridgeline with sweeping Pacific views. Starts gentle, ends with a real climb.",
+        gear:"Sturdy trail shoes · Water · Layers for coastal wind · Sunscreen" },
+      { name:"Pfeiffer Falls Trail", dist:"1.6 mi RT", gain:"400 ft", time:"1.5h", diff:"easy",
+        desc:"Redwood-lined canyon leading to a 60ft waterfall. Cool and shaded on hot days.",
+        gear:"Water · Light layers" }
+    ],
+    hotelTip:"Big Sur River Inn · Fernwood Resort · Alila Ventana Big Sur (splurge)",
+    dayTrips:"Bixby Bridge · McWay Falls · Pfeiffer Beach · Julia Pfeiffer Burns SP" },
+  { id:11, name:"Carmel-by-the-Sea", lat:36.5552, lng:-121.9233,
+    day:"Day 9 — morning", overnight:false, type:"attraction", dayNum:9,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:12, name:"Monterey", lat:36.6002, lng:-121.8947,
+    day:"Day 9 — midday", overnight:false, type:"attraction", dayNum:9,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:13, name:"Half Moon Bay", lat:37.4636, lng:-122.4286,
+    day:"Day 9 — late afternoon", overnight:false, type:"attraction", dayNum:9,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null },
+  { id:14, name:"San Francisco", lat:37.7749, lng:-122.4194,
+    day:"Day 9 — Return", overnight:false, type:"city", dayNum:9,
+    entryFee:null, ppn:null, nights:null, parkInfo:null, hikes:[], hotelTip:null, dayTrips:null }
+];
+
+let nextId = 200, travelLegs = [], routeLayer = null, markerMap = {};
+let addMode = false, topoOn = false, climateOn = false, climateGroup = null;
+let activeTab = {};   // stopId → active tab key
+let openId    = null; // card pinned open by click or map-pin
+
+// ═══════════════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════════════
+const map = L.map('map', { center:[38.5,-121.5], zoom:6 });
+const darkLayer = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19 }
+).addTo(map);
+const topoLayer = L.tileLayer(
+  'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  { attribution:'© OpenStreetMap contributors, © OpenTopoMap (CC-BY-SA)', maxZoom:17 }
+);
+
+function toggleTopo(){
+  topoOn = !topoOn;
+  document.getElementById('btn-topo').classList.toggle('on', topoOn);
+  if(topoOn){ map.removeLayer(darkLayer); topoLayer.addTo(map); }
+  else       { map.removeLayer(topoLayer); darkLayer.addTo(map); }
+  if(climateGroup) climateGroup.bringToFront?.();
+  if(routeLayer)   routeLayer.bringToFront();
+}
+
+const ZONES = [
+  { name:"North Coast Rainforest",  color:"#2d6a4f", desc:"Heavy rain · Coastal fog · Redwoods",
+    coords:[[42,-124.5],[42,-123.8],[41,-123.5],[39.5,-123.8],[39,-124.2],[39,-124.5]] },
+  { name:"Mediterranean Coast",     color:"#52b788", desc:"Mild · Dry summers · Marine fog",
+    coords:[[39.5,-123.8],[39.5,-121.5],[38,-122],[36.5,-121.5],[35.5,-121],[35.5,-122],[37,-123],[39,-124.2]] },
+  { name:"Central Valley",          color:"#e9c46a", desc:"Hot dry summers · Semi-arid",
+    coords:[[40.5,-122.5],[40.5,-120.5],[36,-119],[35.5,-119.5],[38,-121.5],[40.5,-122.5]] },
+  { name:"Sierra Nevada Alpine",    color:"#6d597a", desc:"Heavy snowpack · Cool summers",
+    coords:[[42,-120.5],[42,-118],[38,-117.5],[36,-118],[36.5,-119],[40,-120],[42,-120.5]] },
+  { name:"Great Basin / High Desert",color:"#f4a261",desc:"Cold winters · Warm summers · Sagebrush",
+    coords:[[42,-118],[42,-114.5],[37,-114.5],[37,-117.5],[38,-117.5],[42,-118]] },
+  { name:"Mojave Desert",           color:"#e76f51", desc:"Extreme heat · Very dry · Joshua trees",
+    coords:[[37,-117.5],[37,-114.5],[34,-114.5],[34,-116],[35,-116.5],[36,-117]] },
+  { name:"Southern Chaparral",      color:"#a7c957", desc:"Mediterranean dry · Shrubland",
+    coords:[[35.5,-121],[35.5,-119.5],[33,-117.5],[32.5,-117.5],[32.5,-118.5],[34,-120]] }
+];
+function buildClimate(){
+  climateGroup = L.layerGroup();
+  ZONES.forEach(z => {
+    L.polygon(z.coords, { color:z.color, weight:1, opacity:.5, fillColor:z.color, fillOpacity:.16 })
+     .bindTooltip(`<strong style="color:${z.color}">${z.name}</strong><br><span style="font-size:11px">${z.desc}</span>`, { sticky:true })
+     .addTo(climateGroup);
+  });
+}
+function toggleClimate(){
+  climateOn = !climateOn;
+  document.getElementById('btn-climate').classList.toggle('on', climateOn);
+  document.getElementById('climate-legend').classList.toggle('show', climateOn);
+  if(climateOn){ if(!climateGroup) buildClimate(); climateGroup.addTo(map); if(routeLayer) routeLayer.bringToFront(); }
+  else          { map.removeLayer(climateGroup); }
+}
+
+// ═══════════════════════════════════════════════════
+// MARKERS
+// ═══════════════════════════════════════════════════
+const TC = { city:'#8957e5', overnight:'#f85149', park:'#3fb950', attraction:'#58a6ff' };
+function makeIcon(type, idx){
+  const c = TC[type] || TC.attraction;
+  const n = idx + 1, sz = n > 9 ? 9 : 11;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
+    <path d="M14 0C6.268 0 0 6.268 0 14c0 8.75 14 22 14 22S28 22.75 28 14C28 6.268 21.732 0 14 0z" fill="${c}" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+    <circle cx="14" cy="14" r="6.5" fill="white" opacity=".9"/>
+    <text x="14" y="18" text-anchor="middle" font-size="${sz}" font-weight="800" fill="${c}" font-family="-apple-system,sans-serif">${n}</text>
+  </svg>`;
+  return L.divIcon({ html:svg, className:'', iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36] });
+}
+
+function buildMarkers(){
+  Object.values(markerMap).forEach(m => map.removeLayer(m));
+  markerMap = {};
+  stops.forEach((s, idx) => {
+    const m = L.marker([s.lat, s.lng], {
+      draggable: true,
+      icon: makeIcon(s.overnight ? 'overnight' : s.type, idx)
+    }).addTo(map);
+
+    m.bindPopup(`
+      <div class="pu-title">${s.name}</div>
+      <div class="pu-day">${s.day}</div>
+      ${s.entryFee ? `<div class="pu-extra">🎫 ${s.entryFee}</div>` : ''}
+      ${s.ppn      ? `<div class="pu-extra" style="color:#7ee787">🏨 ${s.ppn}/night</div>` : ''}
+      <div class="pu-action">Click to open details →</div>`);
+
+    m.on('dragend', e => {
+      const ll = e.target.getLatLng();
+      s.lat = ll.lat; s.lng = ll.lng;
+      fetchRoute();
+    });
+
+    // Pin click → open card in sidebar
+    m.on('click', () => expandCard(s.id, true));
+
+    markerMap[s.id] = m;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// EXPAND / COLLAPSE LOGIC
+//
+// Hover  → handled entirely by CSS :hover  (no JS needed)
+// Click  → toggles .expanded (pinned open); click again removes it
+// Map pin → sets .expanded + scrolls card into view
+// ═══════════════════════════════════════════════════
+function expandCard(stopId, scrollTo = false){
+  const card = document.querySelector(`.stop-card[data-stop-id="${stopId}"]`);
+  if(!card) return;
+
+  if(openId === stopId){
+    // Already pinned → unpin
+    openId = null;
+    card.classList.remove('expanded');
+  } else {
+    // Unpin any previously pinned card
+    if(openId !== null){
+      const prev = document.querySelector(`.stop-card[data-stop-id="${openId}"]`);
+      if(prev) prev.classList.remove('expanded');
+    }
+    openId = stopId;
+    card.classList.add('expanded');
+    if(scrollTo) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// ROUTING
+// ═══════════════════════════════════════════════════
+async function fetchRoute(){
+  setLoading(true);
+  const coords = stops.map(s => `${s.lng.toFixed(6)},${s.lat.toFixed(6)}`).join(';');
+  try {
+    const r = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=false`,
+      { signal: AbortSignal.timeout(12000) }
+    );
+    const d = await r.json();
+    if(d.code === 'Ok' && d.routes.length){
+      travelLegs = d.routes[0].legs.map(l => ({ dur:l.duration, dist:l.distance }));
+      drawRoute(d.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
+    } else throw 0;
+  } catch {
+    travelLegs = stops.slice(0,-1).map((s,i) => {
+      const d = hav(s.lat, s.lng, stops[i+1].lat, stops[i+1].lng);
+      return { dur:(d/75)*3600, dist:d*1000, est:true };
+    });
+    drawRoute(stops.map(s => [s.lat, s.lng]));
+  }
+  updateStats();
+  renderList();
+  setLoading(false);
+}
+function drawRoute(lls){
+  if(routeLayer) map.removeLayer(routeLayer);
+  routeLayer = L.polyline(lls, { color:'#58a6ff', weight:4, opacity:.75, lineCap:'round', lineJoin:'round' }).addTo(map);
+}
+function hav(a,b,c,d){
+  const R=6371, dL=(c-a)*Math.PI/180, dN=(d-b)*Math.PI/180;
+  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function setLoading(on){
+  const b = document.getElementById('btn-recalc');
+  b.textContent = on ? '⌛ Routing…' : '↻ Route';
+  b.disabled = on;
+}
+
+// ═══════════════════════════════════════════════════
+// DATE / STATS
+// ═══════════════════════════════════════════════════
+function getStart(){ return new Date(document.getElementById('start-date').value + 'T12:00:00'); }
+function fmt(s){ const h=Math.floor(s/3600), m=Math.round((s%3600)/60); return h===0?`${m}min`:m===0?`${h}h`:`${h}h ${m}min`; }
+function fmtD(m){ return m<1000?`${Math.round(m)}m`:`${(m/1000).toFixed(0)}km`; }
+function stopDate(dayNum){ const d=new Date(getStart()); d.setDate(d.getDate()+dayNum); return d.toISOString().slice(0,10); }
+function checkoutDate(s){ const d=new Date(stopDate(s.dayNum)+'T12:00:00'); d.setDate(d.getDate()+(s.nights||1)); return d.toISOString().slice(0,10); }
+function hotelUrl(s, p){
+  const ci=stopDate(s.dayNum), co=checkoutDate(s);
+  const loc=encodeURIComponent(s.name.split('/')[0].trim()+', California');
+  const ls=encodeURIComponent(s.name.split('/')[0].split('(')[0].trim());
+  if(p==='booking') return `https://www.booking.com/searchresults.html?ss=${loc}&checkin=${ci}&checkout=${co}&group_adults=3&no_rooms=1`;
+  if(p==='airbnb')  return `https://www.airbnb.com/s/${ls}--California/homes?adults=3&checkin=${ci}&checkout=${co}`;
+  if(p==='vrbo')    return `https://www.vrbo.com/search/keywords:${ls}-california/adults/3/arrival/${ci.replace(/-/g,'')}/departure/${co.replace(/-/g,'')}`;
+}
+function recomputeDayNums(){
+  // Only overnight stops drive the date arithmetic.
+  // First overnight is always night 1; each subsequent adds to the running total.
+  // Non-overnight stops keep their original dayNum (display only).
+  let cum = 1;
+  stops.forEach(stop => {
+    if(stop.overnight){
+      stop.dayNum = cum;
+      cum += (stop.nights || 1);
+    }
+  });
+}
+function changeNights(stopId, delta, event){
+  event.stopPropagation();
+  const stop = stops.find(s => s.id === stopId);
+  if(!stop) return;
+  stop.nights = Math.max(1, (stop.nights||1) + delta);
+  recomputeDayNums();
+  updateStats();
+  renderList();
+}
+function totalNights(){
+  return stops.reduce((s, st) => s + (st.overnight ? (st.nights||1) : 0), 0);
+}
+function fmtK(v){ return (v>=1000 ? '~$'+(v/1000).toFixed(1).replace(/\.0$/,'')+'k' : '$'+v); }
+function updateStats(){
+  const ts = travelLegs.reduce((a,l) => a+(l.dur||0), 0);
+  const td = travelLegs.reduce((a,l) => a+(l.dist||0), 0);
+  document.getElementById('stat-drive').textContent = fmt(ts) + ' driving';
+  document.getElementById('stat-dist').textContent  = Math.round(td/1000).toLocaleString() + ' km total';
+  // Dynamic return date from cumulative nights
+  recomputeDayNums();
+  const n = totalNights();
+  const end = new Date(getStart()); end.setDate(end.getDate()+n);
+  document.getElementById('end-date').value = end.toISOString().slice(0,10);
+  // Nights chip
+  const nc = document.getElementById('stat-nights');
+  if(nc) nc.textContent = n + ' night' + (n!==1?'s':'');
+  // Days in subtitle
+  const dd = document.getElementById('stat-days');
+  if(dd) dd.textContent = n + 1;
+  // Cost range chip
+  const ov = stops.filter(s => s.overnight && s.ppn);
+  let lo=0, hi=0;
+  ov.forEach(s => {
+    const [a,b] = s.ppn.replace(/[$,]/g,'').split('–').map(Number);
+    lo += a*(s.nights||1); hi += b*(s.nights||1);
+  });
+  const totalLo = lo + 80 + 200 + n*100 + 200;
+  const totalHi = hi + 80 + 320 + n*150 + 400;
+  const sc = document.getElementById('stat-cost');
+  if(sc) sc.textContent = fmtK(totalLo) + '–' + fmtK(totalHi);
+}
+function diffLabel(d){
+  return { easy:'<span class="diff-easy">● Easy</span>', mod:'<span class="diff-mod">● Moderate</span>', hard:'<span class="diff-hard">● Hard</span>' }[d] || d;
+}
+
+// ═══════════════════════════════════════════════════
+// PRICE PANEL
+// ═══════════════════════════════════════════════════
+function pricePanelHtml(){
+  const ov = stops.filter(s => s.overnight && s.ppn);
+  let lo=0, hi=0;
+  ov.forEach(s => {
+    const [a,b] = s.ppn.replace(/[$,]/g,'').split('–').map(Number);
+    lo += a*(s.nights||1); hi += b*(s.nights||1);
+  });
+  return `<div class="price-panel">
+    <div class="price-panel-hdr" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.pp-arrow').classList.toggle('open')">
+      <span class="pp-title">💰 Estimated Trip Costs</span>
+      <span class="pp-arrow">▼</span>
+    </div>
+    <div class="price-panel-body">
+      <div class="pp-inner">
+        <div>
+          <div class="ps">🏨 Accommodation (3 people, ${totalNights()} nights)</div>
+          ${ov.map(s=>`<div class="pr">
+            <div><div class="pr-name">${s.name.split('/')[0].trim()}</div>
+            <div class="pr-note">${s.nights} night${s.nights>1?'s':''} · ${stopDate(s.dayNum)}</div></div>
+            <div class="pr-val">${s.ppn}/night</div></div>`).join('')}
+          <div class="p-total"><span class="pl">Hotel subtotal</span><span class="pv">$${lo.toLocaleString()}–$${hi.toLocaleString()}</span></div>
+        </div>
+        <div>
+          <div class="ps">🎫 Park Entry Fees</div>
+          ${stops.filter(s=>s.entryFee).map(s=>`<div class="pr">
+            <div class="pr-name">${s.name.split('/')[0].split('(')[0].trim()}</div>
+            <div class="pr-val" style="color:${s.entryFee==='Free'?'#3fb950':'#e3b341'}">${s.entryFee}</div></div>`).join('')}
+          <div class="pass-tip">💡 <strong>America the Beautiful Pass · $80/vehicle</strong> covers ALL NPS entry fees — Lassen + Sequoia = $70 alone. Buy at <a href="https://store.usgs.gov/america-the-beautiful" target="_blank">store.usgs.gov</a>.</div>
+        </div>
+        <div>
+          <div class="ps">🚗 Other Estimates</div>
+          <div class="pr"><div class="pr-name">Gasoline (~2,200 km)</div><div class="pr-val">$200–$320</div></div>
+          <div class="pr"><div class="pr-name">Food & Restaurants</div><div class="pr-val">~$100–$150/day</div></div>
+          <div class="pr"><div class="pr-name">Activities & misc</div><div class="pr-val">~$200–$400</div></div>
+        </div>
+        <div class="p-total"><span class="pl">🧳 Grand Total (3 people)</span><span class="pv">$${(lo+80+200+totalNights()*100+200).toLocaleString()}–$${(hi+80+320+totalNights()*150+400).toLocaleString()}</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER LIST
+// ═══════════════════════════════════════════════════
+function renderList(){
+  recomputeDayNums();
+  const list = document.getElementById('sidebar-list');
+  const scrollY = list.scrollTop;
+  list.innerHTML = '';
+
+  // Price overview
+  const pp = document.createElement('div');
+  pp.innerHTML = pricePanelHtml();
+  list.appendChild(pp.firstElementChild);
+
+  stops.forEach((stop, idx) => {
+    // ── Determine tabs ──
+    const hasPark  = !!stop.parkInfo;
+    const hasHikes = stop.hikes && stop.hikes.length > 0;
+    const hasHotel = stop.overnight;
+    const hasTabs  = hasPark || hasHikes || hasHotel;
+    const tabKeys  = [];
+    if(hasPark)  tabKeys.push({ k:'park',  label:'🏞 Park Info' });
+    if(hasHikes) tabKeys.push({ k:'hikes', label:`🥾 Hikes (${stop.hikes.length})` });
+    if(hasHotel) tabKeys.push({ k:'hotel', label:'🏨 Hotels' });
+    const curTab = activeTab[stop.id] || (hasPark ? 'park' : hasHikes ? 'hikes' : 'hotel');
+
+    // ── Card type ──
+    const typeClass = stop.overnight ? 'overnight-card' : (stop.type + '-card');
+    const numColor  = TC[stop.overnight ? 'overnight' : stop.type];
+    const badgeCls  = stop.overnight ? 'badge-overnight' : ('badge-' + stop.type);
+    const badgeTxt  = stop.overnight ? 'Overnight' : stop.type === 'park' ? 'Park' : stop.type === 'city' ? 'City' : 'Stop';
+
+    // ── Chips ──
+    let chips = '';
+    if(stop.entryFee) chips += `<span class="fee-chip">🎫 ${stop.entryFee}</span>`;
+    if(stop.ppn)      chips += `<span class="price-chip">🏨 ${stop.ppn}/night</span>`;
+
+    // ── Full content ──
+    let fullHtml = '';
+    if(hasTabs){
+      fullHtml += `<div class="card-tabs">${tabKeys.map(t =>
+        `<div class="card-tab${curTab===t.k?' active':''}" onclick="event.stopPropagation();setTab(${stop.id},'${t.k}')">${t.label}</div>`
+      ).join('')}</div>`;
+
+      if(hasPark){
+        const pi = stop.parkInfo;
+        fullHtml += `<div class="card-tab-pane${curTab==='park'?' active':''}" id="pane-${stop.id}-park">
+          <div class="info-desc">${pi.desc}</div>
+          <div class="info-grid">
+            <div class="info-item"><div class="info-lbl">Rating</div><div class="info-val">${pi.rating}</div></div>
+            <div class="info-item"><div class="info-lbl">Best Time</div><div class="info-val">${pi.best}</div></div>
+            <div class="info-item" style="grid-column:1/-1"><div class="info-lbl">Crowd Level</div><div class="info-val">${pi.crowds}</div></div>
+          </div>
+          <ul class="hl-list">${pi.hl.map(h=>`<li>${h}</li>`).join('')}</ul>
+        </div>`;
+      }
+
+      if(hasHikes){
+        fullHtml += `<div class="card-tab-pane${curTab==='hikes'?' active':''}" id="pane-${stop.id}-hikes">
+          ${stop.hikes.map(h=>`<div class="hike-card">
+            <div class="hike-name">${h.name}</div>
+            <div class="hike-stats">
+              <div class="hs">📏 <span>${h.dist}</span></div>
+              <div class="hs">⬆️ <span>${h.gain}</span></div>
+              <div class="hs">⏱ <span>${h.time}</span></div>
+              <div class="hs">${diffLabel(h.diff)}</div>
+            </div>
+            <div class="hike-desc">${h.desc}</div>
+            ${h.gear ? `<div class="hike-gear">🎒 ${h.gear}</div>` : ''}
+          </div>`).join('')}
+        </div>`;
+      }
+
+      if(hasHotel){
+        const ci = stopDate(stop.dayNum), co = checkoutDate(stop);
+        fullHtml += `<div class="card-tab-pane${curTab==='hotel'?' active':''}" id="pane-${stop.id}-hotel">
+          <div class="hotel-dates">📅 Check-in <strong>${ci}</strong> → Check-out <strong>${co}</strong> · ${stop.nights||1} night${(stop.nights||1)>1?'s':''} · 3 adults</div>
+          ${stop.hotelTip ? `<div class="hotel-suggest"><strong>Suggested from itinerary</strong>${stop.hotelTip}</div>` : ''}
+          ${stop.dayTrips ? `<div class="hotel-suggest daynote"><strong>Day trips from this base</strong>${stop.dayTrips}</div>` : ''}
+          <div class="search-btns">
+            <a class="sbtn btn-booking" href="${hotelUrl(stop,'booking')}" target="_blank" onclick="event.stopPropagation()">🔵 Booking.com</a>
+            <a class="sbtn btn-airbnb"  href="${hotelUrl(stop,'airbnb')}"  target="_blank" onclick="event.stopPropagation()">🔴 Airbnb</a>
+            <a class="sbtn btn-vrbo"    href="${hotelUrl(stop,'vrbo')}"    target="_blank" onclick="event.stopPropagation()">🔷 VRBO</a>
+          </div>
+        </div>`;
+      }
+    } else {
+      fullHtml += `<div class="card-tab-pane active" style="padding:8px 12px">
+        <a class="sbtn btn-maps" href="https://www.google.com/maps/search/${encodeURIComponent(stop.name+' California')}" target="_blank" onclick="event.stopPropagation()">🗺️ Google Maps</a>
+      </div>`;
+    }
+
+    // ── Assemble card ──
+    const card = document.createElement('div');
+    card.className = `stop-card ${typeClass}${openId === stop.id ? ' expanded' : ''}`;
+    card.dataset.stopId = stop.id;
+
+    card.innerHTML = `
+      <div class="card-mini">
+        <div class="mini-num" style="background:${numColor}">${idx+1}</div>
+        <div class="mini-body">
+          <div class="mini-name">${stop.name}</div>
+          <div class="mini-meta">
+            <span class="mini-day">${stop.day}</span>
+            ${chips}
+          </div>
+        </div>
+        <div class="mini-right">
+          <span class="badge ${badgeCls}">${badgeTxt}</span>
+          ${stop.overnight ? `
+          <div class="nights-ctrl" onclick="event.stopPropagation()">
+            <button class="nc-btn" onclick="changeNights(${stop.id},-1,event)">−</button>
+            <span class="nc-val">${stop.nights||1}</span>
+            <button class="nc-btn" onclick="changeNights(${stop.id},+1,event)">+</button>
+          </div>
+          <span class="nc-label">${(stop.nights||1)===1?'night':'nights'}</span>` : ''}
+          ${hasTabs ? '<span class="expand-icon">▾</span>' : ''}
+          ${stops.length > 2 ? `<button class="rm-btn" onclick="event.stopPropagation();removeStop(${stop.id})">×</button>` : ''}
+        </div>
+      </div>
+      <div class="card-full">${fullHtml}</div>`;
+
+    // ── Click toggles pin; hover is handled by CSS :hover ──
+    card.addEventListener('click', () => expandCard(stop.id, false));
+
+    list.appendChild(card);
+
+    // ── Connector ──
+    if(idx < stops.length - 1){
+      const leg = travelLegs[idx];
+      const conn = document.createElement('div');
+      conn.className = 'connector';
+      if(leg){
+        const e = leg.est ? ' est.' : '';
+        conn.innerHTML = `<div class="conn-line"></div><div class="conn-badges">
+          <span class="time-badge">🚗 ${fmt(leg.dur)}${e}</span>
+          <span class="dist-badge">${fmtD(leg.dist)}</span></div>`;
+      } else {
+        conn.innerHTML = `<div class="conn-line"></div><span class="spin"></span>`;
+      }
+      list.appendChild(conn);
+    }
+  });
+
+  list.scrollTop = scrollY;
+}
+
+function setTab(id, tab){
+  activeTab[id] = tab;
+  const card = document.querySelector(`.stop-card[data-stop-id="${id}"]`);
+  if(!card) return;
+  card.querySelectorAll('.card-tab').forEach(t =>
+    t.classList.toggle('active', t.textContent.toLowerCase().includes(
+      tab==='park'?'park':tab==='hikes'?'hike':'hotel'
+    ))
+  );
+  card.querySelectorAll('.card-tab-pane').forEach(p =>
+    p.classList.toggle('active', p.id === `pane-${id}-${tab}`)
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// ADD / REMOVE
+// ═══════════════════════════════════════════════════
+function toggleAddMode(){
+  addMode = !addMode;
+  const btn  = document.getElementById('btn-add');
+  const hint = document.getElementById('map-hint');
+  btn.classList.toggle('on', addMode);
+  btn.textContent = addMode ? '✕ Cancel' : '＋ Add Stop';
+  hint.classList.toggle('show', addMode);
+  map.getContainer().style.cursor = addMode ? 'crosshair' : '';
+}
+map.on('click', function(e){
+  if(!addMode) return;
+  const name     = prompt('Stop name:'); if(!name){ toggleAddMode(); return; }
+  const type     = prompt('Type: overnight / park / attraction / city', 'attraction') || 'attraction';
+  const dayLabel = prompt('Day label (e.g. "Day 5")', 'Day ?') || 'Day ?';
+  const dayNum   = parseInt(prompt('Day number (0–9):', '5') || '5');
+  const isOv     = type === 'overnight';
+  const ns = {
+    id:nextId++, name, lat:e.latlng.lat, lng:e.latlng.lng,
+    day:dayLabel, overnight:isOv, type:isOv?'overnight':type, dayNum,
+    entryFee:null,
+    ppn:   isOv ? prompt('Price per night? (e.g. $150–$250)', '') : null,
+    nights:isOv ? parseInt(prompt('Nights staying:', '1') || '1') : null,
+    parkInfo:null, hikes:[], hotelTip:null, dayTrips:null
+  };
+  let ins = stops.length - 1;
+  for(let i = 0; i < stops.length; i++){ if(stops[i].dayNum > dayNum){ ins = i; break; } }
+  stops.splice(ins, 0, ns);
+  toggleAddMode(); buildMarkers(); fetchRoute();
+});
+function removeStop(id){
+  if(stops.length <= 2){ alert('Need at least 2 stops.'); return; }
+  if(openId === id) openId = null;
+  stops = stops.filter(s => s.id !== id);
+  if(markerMap[id]){ map.removeLayer(markerMap[id]); delete markerMap[id]; }
+  buildMarkers(); fetchRoute();
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function fitMap(){
+  if(!stops.length) return;
+  map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lng])), { padding:[40, 440] });
+}
+document.getElementById('start-date').addEventListener('change', () => { updateStats(); renderList(); });
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+buildMarkers();
+fetchRoute();
+setTimeout(fitMap, 300);
+</script>
+</body>
+</html>
