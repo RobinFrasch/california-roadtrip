@@ -390,6 +390,46 @@ body.light .pw-btn{background:#1a7f37}
 body.light .pw-btn:hover{background:#2da44e}
 body.light .pw-err{color:#cf222e}
 
+/* ── MOBILE SIDEBAR OVERLAY ── */
+@media (max-width:768px){
+  #sidebar{
+    position:fixed;inset:0;
+    width:100% !important;
+    transform:translateX(110%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    z-index:500;
+  }
+  #sidebar.sidebar-open{transform:translateX(0)}
+  .mobile-close{display:flex !important}
+}
+
+/* ── MOBILE CLOSE ROW ── */
+.mobile-close{
+  display:none;width:100%;
+  align-items:center;gap:7px;padding:8px 14px 4px;
+  background:none;border:none;color:#8b949e;
+  font-size:12px;cursor:pointer;text-align:left;
+}
+.mobile-close:hover{color:#58a6ff}
+body.light .mobile-close{color:#57606a}
+body.light .mobile-close:hover{color:#0969da}
+
+/* ── SIDEBAR FAB (mobile only) ── */
+#sidebar-fab{
+  display:none;
+  position:fixed;bottom:24px;right:18px;
+  z-index:501;
+  width:56px;height:56px;border-radius:50%;
+  background:#0969da;border:none;
+  color:#fff;font-size:24px;cursor:pointer;
+  box-shadow:0 4px 24px rgba(0,0,0,.45);
+  align-items:center;justify-content:center;
+  transition:background .15s,transform .15s;
+}
+#sidebar-fab:hover{background:#0550ae;transform:scale(1.07)}
+#sidebar-fab.open{background:#57606a}
+@media (max-width:768px){#sidebar-fab{display:flex}}
+
 /* ── LEAFLET POPUPS ── */
 .leaflet-popup-content-wrapper{background:#21262d;border:1px solid #30363d;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
 .leaflet-popup-content{color:#e6edf3;margin:10px 14px;min-width:150px}
@@ -412,6 +452,7 @@ body.light .pw-err{color:#cf222e}
   </div>
 </div>
 <div id="map"></div>
+<button id="sidebar-fab" onclick="toggleSidebar()" title="Open trip planner">🗺</button>
 <div id="map-hint">📍 Click anywhere on the map to place your new stop</div>
 <div id="climate-legend">
   <div class="cl-title">Climate Zones</div>
@@ -425,6 +466,7 @@ body.light .pw-err{color:#cf222e}
 </div>
 
 <div id="sidebar">
+  <button class="mobile-close" onclick="toggleSidebar()">← Back to map</button>
   <div id="sidebar-header" style="position:relative">
     <div class="trip-title">🌉 California Road Trip</div>
     <div class="trip-sub"><span id="stat-days">9</span> Days · National Parks &amp; Coast · 3 People</div>
@@ -628,7 +670,11 @@ const topoLayer = L.tileLayer(
   { attribution:'© OpenStreetMap contributors, © OpenTopoMap (CC-BY-SA)', maxZoom:17 }
 );
 
-let lightMode = false;
+let lightMode = true;
+// Apply light mode immediately on load
+document.body.classList.add('light');
+map.removeLayer(darkLayer); lightLayer.addTo(map);
+
 function toggleTheme(){
   lightMode = !lightMode;
   document.body.classList.toggle('light', lightMode);
@@ -640,6 +686,15 @@ function toggleTheme(){
     if(climateGroup) climateGroup.bringToFront?.();
     if(routeLayer)   routeLayer.bringToFront();
   }
+}
+
+function toggleSidebar(){
+  const sidebar = document.getElementById('sidebar');
+  const fab = document.getElementById('sidebar-fab');
+  const isOpen = sidebar.classList.toggle('sidebar-open');
+  fab.textContent = isOpen ? '✕' : '🗺';
+  fab.classList.toggle('open', isOpen);
+  setTimeout(() => map.invalidateSize(), 320);
 }
 
 function toggleTopo(){
@@ -1124,7 +1179,9 @@ function removeStop(id){
 // ═══════════════════════════════════════════════════
 function fitMap(){
   if(!stops.length) return;
-  map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lng])), { padding:[40, 440] });
+  const isMobile = window.innerWidth <= 768;
+  const pad = isMobile ? [60, 60] : [40, 440];
+  map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lng])), { padding:pad });
 }
 document.getElementById('start-date').addEventListener('change', () => { updateStats(); renderList(); });
 
