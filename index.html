@@ -286,6 +286,109 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 .spin{display:inline-block;width:10px;height:10px;border:2px solid #30363d;border-top:2px solid #58a6ff;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
 @keyframes sp{to{transform:rotate(360deg)}}
 
+/* ── THEME TOGGLE BTN ── */
+#theme-btn{
+  position:absolute;top:13px;right:14px;
+  background:none;border:1px solid #30363d;border-radius:20px;
+  color:#8b949e;font-size:14px;cursor:pointer;
+  padding:3px 10px;transition:all .2s;
+  display:flex;align-items:center;gap:5px;
+}
+#theme-btn:hover{background:#21262d;border-color:#58a6ff;color:#58a6ff}
+body.light #theme-btn{border-color:#d0d7de;color:#57606a}
+body.light #theme-btn:hover{background:#eaeef2;border-color:#0969da;color:#0969da}
+
+/* ── LIGHT MODE ── */
+body.light{background:#f6f8fa;color:#1f2328}
+body.light #sidebar{background:#ffffff;border-color:#d0d7de}
+body.light #sidebar-header{background:#f6f8fa;border-color:#d0d7de}
+body.light .trip-title{color:#1f2328}
+body.light .trip-sub{color:#57606a}
+body.light #sidebar-controls{background:#f6f8fa;border-color:#d0d7de}
+body.light .ctrl-label{color:#57606a}
+body.light .ctrl-input{background:#ffffff;border-color:#d0d7de;color:#1f2328}
+body.light .ctrl-input:disabled{color:#57606a}
+body.light .sc{background:#eaeef2;border-color:#d0d7de;color:#1f2328}
+body.light .sc.hl{background:#dbeafe;border-color:#0969da;color:#0969da}
+body.light .tbtn{background:#eaeef2;border-color:#d0d7de;color:#1f2328}
+body.light .tbtn:hover,body.light .tbtn.on{background:#dbeafe;border-color:#0969da;color:#0969da}
+body.light .tbtn.danger:hover{background:#ffebe9;border-color:#cf222e;color:#cf222e}
+body.light #sidebar-list{scrollbar-color:#d0d7de transparent}
+body.light #sidebar-list::-webkit-scrollbar-thumb{background:#d0d7de}
+body.light .price-panel{background:#ffffff;border-color:#d0d7de}
+body.light .price-panel-hdr{background:#f6f8fa}
+body.light .price-panel-hdr:hover{background:#eaeef2}
+body.light .pp-title{color:#1f2328}
+body.light .pp-arrow{color:#57606a}
+body.light .ps{color:#57606a}
+body.light .pr{border-color:#eaeef2}
+body.light .pr-name{color:#1f2328}
+body.light .pr-note{color:#57606a}
+body.light .pr-val{color:#1a7f37}
+body.light .p-total{background:#dbeafe}
+body.light .p-total .pl{color:#0550ae}
+body.light .p-total .pv{color:#0969da}
+body.light .pass-tip{background:#dafbe1;border-color:#1a7f3744;color:#1a7f37}
+body.light .pass-tip a{color:#1a7f37}
+body.light .conn-line{background:#d0d7de}
+body.light .time-badge{background:#dbeafe;color:#0550ae}
+body.light .dist-badge{background:#eaeef2;color:#57606a}
+body.light .stop-card{background:#ffffff;border-color:#d0d7de}
+body.light .stop-card:hover{border-color:#0969da}
+body.light .stop-card.expanded{border-color:#0969da;box-shadow:0 0 0 1px #0969da33}
+body.light .mini-name{color:#1f2328}
+body.light .mini-day{color:#57606a}
+body.light .expand-icon{color:#57606a}
+body.light .fee-chip{background:#fef9c3;border-color:#9a670044;color:#9a6700}
+body.light .price-chip{background:#dafbe1;border-color:#1a7f3744;color:#1a7f37}
+body.light .badge-overnight{background:#ffebe9;color:#cf222e;border-color:#cf222e44}
+body.light .badge-park{background:#dafbe1;color:#1a7f37;border-color:#1a7f3744}
+body.light .badge-attraction{background:#dbeafe;color:#0969da;border-color:#0969da44}
+body.light .badge-city{background:#ede9fe;color:#6e40c9;border-color:#6e40c944}
+body.light .rm-btn{background:#ffebe9;border-color:#cf222e;color:#cf222e}
+body.light .nights-ctrl{background:#f6f8fa;border-color:#d0d7de}
+body.light .nc-btn{color:#0969da}
+body.light .nc-btn:hover{background:#dbeafe}
+body.light .nc-val{color:#1f2328}
+body.light .nc-label{color:#57606a}
+body.light .card-full{border-color:#d0d7de !important}
+body.light .card-tabs{background:#f6f8fa}
+body.light .card-tab{color:#57606a;border-color:#d0d7de}
+body.light .card-tab:hover,body.light .card-tab.active{background:#ffffff;color:#0969da}
+body.light .card-tab-pane{background:#ffffff}
+body.light .info-desc{color:#57606a}
+body.light .info-item{background:#f6f8fa}
+body.light .info-lbl{color:#57606a}
+body.light .info-val{color:#1f2328}
+body.light .hl-list li{color:#1f2328;background:#f6f8fa}
+body.light .hike-card{background:#f6f8fa;border-color:#d0d7de}
+body.light .hike-name{color:#1f2328}
+body.light .hs{color:#57606a;background:#eaeef2}
+body.light .hs span{color:#1f2328}
+body.light .diff-easy{color:#1a7f37}
+body.light .diff-mod{color:#9a6700}
+body.light .diff-hard{color:#cf222e}
+body.light .hike-desc{color:#57606a}
+body.light .hike-gear{color:#57606a}
+body.light .hotel-dates{color:#57606a;background:#f6f8fa;border-color:#cf222e}
+body.light .hotel-suggest{color:#1f2328}
+body.light .hotel-suggest strong{color:#57606a}
+body.light .hotel-suggest.daynote{border-color:#1a7f37}
+body.light #map-hint{background:rgba(246,248,250,.92);border-color:#0969da;color:#0550ae}
+body.light #climate-legend{background:rgba(246,248,250,.88);border-color:#d0d7de}
+body.light .cl-title{color:#57606a}
+body.light .cl-row{color:#1f2328}
+body.light .spin{border-color:#d0d7de;border-top-color:#0969da}
+body.light #pw-gate{background:#f6f8fa}
+body.light .pw-box{background:#ffffff;border-color:#d0d7de}
+body.light .pw-title{color:#1f2328}
+body.light .pw-sub{color:#57606a}
+body.light .pw-input{background:#f6f8fa;border-color:#d0d7de;color:#1f2328}
+body.light .pw-input:focus{border-color:#0969da}
+body.light .pw-btn{background:#1a7f37}
+body.light .pw-btn:hover{background:#2da44e}
+body.light .pw-err{color:#cf222e}
+
 /* ── LEAFLET POPUPS ── */
 .leaflet-popup-content-wrapper{background:#21262d;border:1px solid #30363d;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
 .leaflet-popup-content{color:#e6edf3;margin:10px 14px;min-width:150px}
@@ -321,9 +424,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 </div>
 
 <div id="sidebar">
-  <div id="sidebar-header">
+  <div id="sidebar-header" style="position:relative">
     <div class="trip-title">🌉 California Road Trip</div>
     <div class="trip-sub"><span id="stat-days">9</span> Days · National Parks &amp; Coast · 3 People</div>
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">🌙 Dark</button>
   </div>
   <div id="sidebar-controls">
     <div class="ctrl-row">
@@ -514,16 +618,39 @@ const darkLayer = L.tileLayer(
   'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   { attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19 }
 ).addTo(map);
+const lightLayer = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19 }
+);
 const topoLayer = L.tileLayer(
   'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
   { attribution:'© OpenStreetMap contributors, © OpenTopoMap (CC-BY-SA)', maxZoom:17 }
 );
 
+let lightMode = false;
+function toggleTheme(){
+  lightMode = !lightMode;
+  document.body.classList.toggle('light', lightMode);
+  const btn = document.getElementById('theme-btn');
+  btn.textContent = lightMode ? '🌙 Dark' : '☀️ Light';
+  if(!topoOn){
+    if(lightMode){ map.removeLayer(darkLayer); lightLayer.addTo(map); }
+    else         { map.removeLayer(lightLayer); darkLayer.addTo(map); }
+    if(climateGroup) climateGroup.bringToFront?.();
+    if(routeLayer)   routeLayer.bringToFront();
+  }
+}
+
 function toggleTopo(){
   topoOn = !topoOn;
   document.getElementById('btn-topo').classList.toggle('on', topoOn);
-  if(topoOn){ map.removeLayer(darkLayer); topoLayer.addTo(map); }
-  else       { map.removeLayer(topoLayer); darkLayer.addTo(map); }
+  if(topoOn){
+    map.removeLayer(darkLayer); map.removeLayer(lightLayer);
+    topoLayer.addTo(map);
+  } else {
+    map.removeLayer(topoLayer);
+    (lightMode ? lightLayer : darkLayer).addTo(map);
+  }
   if(climateGroup) climateGroup.bringToFront?.();
   if(routeLayer)   routeLayer.bringToFront();
 }
