@@ -6,6 +6,35 @@
 <title>🌉 California Road Trip Planner</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
+/* ── PASSWORD GATE ── */
+#pw-gate{
+  position:fixed;inset:0;z-index:99999;
+  background:#0d1117;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:20px;
+}
+#pw-gate.hidden{display:none}
+.pw-box{
+  background:#161b22;border:1px solid #30363d;border-radius:16px;
+  padding:40px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;
+  box-shadow:0 8px 40px rgba(0,0,0,.6);
+}
+.pw-title{font-size:26px;font-weight:800;color:#f0f6fc;letter-spacing:-.5px}
+.pw-sub{font-size:13px;color:#8b949e;text-align:center;line-height:1.5}
+.pw-input{
+  width:260px;padding:10px 14px;border-radius:8px;
+  background:#0d1117;border:1px solid #30363d;color:#f0f6fc;
+  font-size:15px;outline:none;text-align:center;letter-spacing:2px;
+}
+.pw-input:focus{border-color:#58a6ff}
+.pw-btn{
+  width:260px;padding:10px;border-radius:8px;border:none;
+  background:#238636;color:#fff;font-size:14px;font-weight:700;
+  cursor:pointer;transition:background .15s;
+}
+.pw-btn:hover{background:#2ea043}
+.pw-err{font-size:12px;color:#f85149;min-height:16px}
+
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
@@ -268,6 +297,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 </style>
 </head>
 <body>
+<div id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-title">🌉 California Road Trip</div>
+    <div class="pw-sub">Enter the password to access<br>the trip planner</div>
+    <input class="pw-input" id="pw-input" type="password" placeholder="••••••••••"
+           onkeydown="if(event.key==='Enter')checkPw()">
+    <button class="pw-btn" onclick="checkPw()">Open Planner →</button>
+    <div class="pw-err" id="pw-err"></div>
+  </div>
+</div>
 <div id="map"></div>
 <div id="map-hint">📍 Click anywhere on the map to place your new stop</div>
 <div id="climate-legend">
@@ -312,6 +351,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+function checkPw(){
+  const val = document.getElementById('pw-input').value;
+  if(val === 'didinerven'){
+    document.getElementById('pw-gate').classList.add('hidden');
+    document.getElementById('pw-input').value = '';
+  } else {
+    const err = document.getElementById('pw-err');
+    err.textContent = 'Wrong password — try again.';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+    setTimeout(() => err.textContent = '', 2500);
+  }
+}
+window.addEventListener('DOMContentLoaded', () => document.getElementById('pw-input').focus());
+</script>
 <script>
 // ═══════════════════════════════════════════════════
 // DATA
